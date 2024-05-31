@@ -18,31 +18,34 @@
 /xmlrpc.php
 
 # Configuration
-#wp-config.php
+wp-config.php
 
 # Example themes
-#/wp-content/themes/twenty*/
+/wp-content/themes/twenty*/
 
 # Example plugin
-#/wp-content/plugins/hello.php
+/wp-content/plugins/hello.php
 
 # Uploads
-#/wp-content/uploads/
+/wp-content/uploads/
 
 # Log files
-#*.log
+*.log
 
 # htaccess
-#/.htaccess
+/.htaccess
+
+#local-xdebuginfo.php
+default.php
 
 # All plugins
 #
 # Note: If you wish to whitelist plugins,
 # uncomment the next line
-/wp-content/plugins
+#/wp-content/plugins
 
 # All themes
 #
 # Note: If you wish to whitelist themes,
 # uncomment the next line
-/wp-content/themes
+#/wp-content/themes
