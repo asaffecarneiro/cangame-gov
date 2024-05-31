@@ -1,0 +1,82 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  
+  workflow_dispatch:
+
+
+jobs:
+
+  deploy-development:
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: ${{ vars.URL }}
+    steps:
+      - name: Repo Checkout
+        uses: actions/checkout@v1
+
+      - name: Hostinger Development Server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          ARGS: "-rlgoDzvc -i --delete"
+          SOURCE: "./"
+          REMOTE_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          REMOTE_USER: ${{ secrets.DEPLOY_SSH_USER  }}
+          REMOTE_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          TARGET: ${{ vars.TARGET }}
+          EXCLUDE: ".vscode, *.gitignore, *.gitmodules, *.git, *.gitkeep, *.github, README.MD, LICENSE"
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ vars.URL }}
+    needs: deploy-development
+    steps:
+      - name: Repo Checkout
+        uses: actions/checkout@v1
+        
+      - name: Hostinger Staging Server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          ARGS: "-rlgoDzvc -i --delete"
+          SOURCE: "./"
+          REMOTE_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          REMOTE_USER: ${{ secrets.DEPLOY_SSH_USER  }}
+          REMOTE_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          TARGET: ${{ vars.TARGET }}
+          EXCLUDE: ".vscode, *.gitignore, *.gitmodules, *.git, *.gitkeep, *.github, README.MD, LICENSE"
+             
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.URL }}
+    needs: deploy-staging
+    steps:
+      - name: Repo Checkout
+        uses: actions/checkout@v1
+      - name: Hostinger Production Server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          ARGS: "-rlgoDzvc -i --delete"
+          SOURCE: "./"
+          REMOTE_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          REMOTE_USER: ${{ secrets.DEPLOY_SSH_USER  }}
+          REMOTE_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          TARGET: ${{ vars.TARGET }}
+          EXCLUDE: ".vscode, *.gitignore, *.gitmodules, *.git, *.gitkeep, *.github, README.MD, LICENSE"
+
+
+
+
