@@ -1,9 +1,6 @@
 name: Deploy to Hostinger
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
@@ -92,6 +89,33 @@ jobs:
     steps:
       - name: Repo Checkout
         uses: actions/checkout@v1
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          cat >>~/.ssh/config <<END
+          Host hostinger
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port $SSH_PORT
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking no
+          END
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT}}
+
+      - name: Test SSH Connection
+        run: |
+          ssh hostinger "echo SSH connection successful"
+
+      - name: Backup Current Deployment
+        run: |
+          ssh hostinger "tar czf ~/backup_$(date +'%Y%m%d%H%M%S').tar.gz -C /home/u596734850/domains/staging-gov.cangame.com.br public_html"  
         
       - name: Hostinger Staging Server
         uses: easingthemes/ssh-deploy@main
@@ -104,7 +128,30 @@ jobs:
           REMOTE_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
           TARGET: ${{ vars.TARGET }}
           EXCLUDE: ".vscode, *.gitignore, *.gitmodules, *.git, *.gitkeep, *.github, README.MD, LICENSE, CODEOWNERS"
-             
+          SCRIPT_AFTER: |
+            set -e
+            # Verifica o status do site
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" https://staging-gov.cangame.com.br)
+            if [[ $STATUS -ne 200 ]]; then
+              echo "Deployment failed with status $STATUS. Reverting to previous backup."
+              # Reverte para o backup anterior
+              ssh -o StrictHostKeyChecking=no -p ${{ secrets.DEPLOY_SSH_PORT }} ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }} "rm -rf /home/u596734850/domains/staging-gov.cangame.com.br/public_html/* && tar xzf ~/backup_*.tar.gz -C /home/u596734850/domains/staging-gov.cangame.com.br"
+              echo "Reverted to previous backup."
+              exit 1
+            else
+              echo "Deployment successful."
+            fi
+      
+      - name: Notify Deployment Failure
+        if: failure()
+        run: |
+          echo "Deployment failed. The site has been reverted to the previous backup."
+
+      - name: Notify Deployment Success
+        if: success()
+        run: |
+          echo "Deployment successful."      
+
   deploy-production:
     runs-on: ubuntu-latest
     environment:
@@ -114,6 +161,33 @@ jobs:
     steps:
       - name: Repo Checkout
         uses: actions/checkout@v1
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          cat >>~/.ssh/config <<END
+          Host hostinger
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port $SSH_PORT
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking no
+          END
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT}}
+
+      - name: Test SSH Connection
+        run: |
+          ssh hostinger "echo SSH connection successful"
+
+      - name: Backup Current Deployment
+        run: |
+          ssh hostinger "tar czf ~/backup_$(date +'%Y%m%d%H%M%S').tar.gz -C /home/u596734850/domains/gov.cangame.com.br public_html"    
+      
       - name: Hostinger Production Server
         uses: easingthemes/ssh-deploy@main
         with:
@@ -125,7 +199,29 @@ jobs:
           REMOTE_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
           TARGET: ${{ vars.TARGET }}
           EXCLUDE: ".vscode, *.gitignore, *.gitmodules, *.git, *.gitkeep, *.github, README.MD, LICENSE, CODEOWNERS"
+          SCRIPT_AFTER: |
+            set -e
+            # Verifica o status do site
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" https://gov.cangame.com.br)
+            if [[ $STATUS -ne 200 ]]; then
+              echo "Deployment failed with status $STATUS. Reverting to previous backup."
+              # Reverte para o backup anterior
+              ssh -o StrictHostKeyChecking=no -p ${{ secrets.DEPLOY_SSH_PORT }} ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }} "rm -rf /home/u596734850/domains/gov.cangame.com.br/public_html/* && tar xzf ~/backup_*.tar.gz -C /home/u596734850/domains/gov.cangame.com.br"
+              echo "Reverted to previous backup."
+              exit 1
+            else
+              echo "Deployment successful."
+            fi
 
+      - name: Notify Deployment Failure
+        if: failure()
+        run: |
+          echo "Deployment failed. The site has been reverted to the previous backup."
+
+      - name: Notify Deployment Success
+        if: success()
+        run: |
+          echo "Deployment successful."  
 
 
 
